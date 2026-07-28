@@ -1,0 +1,71 @@
+name: build
+
+on:
+  schedule:
+    - cron: '0 15 * * *'      # 毎日 JST 0時ごろ 上流をチェック
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'upstream ref to build (blank=latest release)'
+        required: false
+        default: ''
+      force:
+        description: 'rebuild even if version already released'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Determine upstream version
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REF="${{ github.event.inputs.ref }}"
+          if [ -z "$REF" ]; then
+            REF="$(gh api repos/keepassium/KeePassium/releases/latest -q .tag_name)"
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          # このリポに同名リリースが既にあるか
+          if gh release view "$REF" -R "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        if: steps.ver.outputs.exists == 'false' || github.event.inputs.force == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash build.sh "${{ steps.ver.outputs.ref }}"
+
+      - name: Release
+        if: steps.ver.outputs.exists == 'false' || github.event.inputs.force == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source dist/meta.env
+          gh release create "${{ steps.ver.outputs.ref }}" \
+            dist/KeePassiumPro-net.gapul.ipa dist/icon.png \
+            --title "KeePassium Pro $VERSION (upstream ${{ steps.ver.outputs.ref }})" \
+            --notes "Auto-built from keepassium/KeePassium ${{ steps.ver.outputs.ref }}. net.gapul namespace, Intune removed, premium (Pro/prepaid), unsigned for SideStore." \
+            -R "${{ github.repository }}" || \
+          gh release upload "${{ steps.ver.outputs.ref }}" dist/KeePassiumPro-net.gapul.ipa dist/icon.png --clobber -R "${{ github.repository }}"
+
+      - name: Skipped note
+        if: steps.ver.outputs.exists == 'true' && github.event.inputs.force != 'true'
+        run: echo "Version ${{ steps.ver.outputs.ref }} already released; nothing to do."

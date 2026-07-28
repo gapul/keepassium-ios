@@ -37,7 +37,7 @@ jobs:
         run: |
           REF="${{ github.event.inputs.ref }}"
           if [ -z "$REF" ]; then
-            REF="$(gh api repos/keepassium/KeePassium/releases/latest -q .tag_name)"
+            REF="$(gh api 'repos/keepassium/KeePassium/tags?per_page=100' -q '.[].name' | sort -V | tail -1)"
           fi
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           # このリポに同名リリースが既にあるか

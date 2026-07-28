@@ -19,7 +19,7 @@ rm -rf "$WORK" "$DIST"; mkdir -p "$WORK" "$DIST"
 # --- 1) 対象バージョン決定 ---
 REF="${1:-}"
 if [ -z "$REF" ]; then
-  REF="$(gh api repos/keepassium/KeePassium/releases/latest -q .tag_name 2>/dev/null || true)"
+  REF="$(gh api 'repos/keepassium/KeePassium/tags?per_page=100' -q '.[].name' 2>/dev/null | sort -V | tail -1 || true)"
   [ -z "$REF" ] && REF="$(git ls-remote --tags --refs "$UPSTREAM" | awk -F/ '{print $NF}' | sort -V | tail -1)"
 fi
 echo "==> building KeePassium ref: $REF"

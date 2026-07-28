@@ -60,11 +60,22 @@ jobs:
         run: |
           source dist/meta.env
           gh release create "${{ steps.ver.outputs.ref }}" \
-            dist/KeePassiumPro-net.gapul.ipa dist/icon.png \
+            dist/KeePassiumPro-net.gapul.ipa dist/icon.png dist/meta.env \
             --title "KeePassium Pro $VERSION (upstream ${{ steps.ver.outputs.ref }})" \
             --notes "Auto-built from keepassium/KeePassium ${{ steps.ver.outputs.ref }}. net.gapul namespace, Intune removed, premium (Pro/prepaid), unsigned for SideStore." \
             -R "${{ github.repository }}" || \
-          gh release upload "${{ steps.ver.outputs.ref }}" dist/KeePassiumPro-net.gapul.ipa dist/icon.png --clobber -R "${{ github.repository }}"
+          gh release upload "${{ steps.ver.outputs.ref }}" dist/KeePassiumPro-net.gapul.ipa dist/icon.png dist/meta.env --clobber -R "${{ github.repository }}"
+
+      - name: Notify source repo to refresh
+        if: steps.ver.outputs.exists == 'false' || github.event.inputs.force == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SOURCE_DISPATCH_TOKEN }}
+        run: |
+          if [ -n "$GH_TOKEN" ]; then
+            gh api repos/gapul/altstore-source/dispatches -f event_type=refresh-source || true
+          else
+            echo "SOURCE_DISPATCH_TOKEN 未設定。altstore-source は自身の cron で更新されます。"
+          fi
 
       - name: Skipped note
         if: steps.ver.outputs.exists == 'true' && github.event.inputs.force != 'true'

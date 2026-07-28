@@ -112,9 +112,9 @@ plutil -convert xml1 -o /dev/null "$PBX"   # 構文チェック(失敗すれば�
 
 # --- 6) 依存解決 + unsigned device ビルド ---
 export GIT_TERMINAL_PROMPT=0
-xcodebuild -resolvePackageDependencies -project KeePassium.xcodeproj -scheme "KeePassium Pro" \
+xcodebuild -resolvePackageDependencies -workspace KeePassium.xcworkspace -scheme "KeePassium Pro" \
   -derivedDataPath build -scmProvider system
-xcodebuild build -project KeePassium.xcodeproj -scheme "KeePassium Pro" \
+xcodebuild build -workspace KeePassium.xcworkspace -scheme "KeePassium Pro" \
   -configuration Release -sdk iphoneos -derivedDataPath build \
   -disableAutomaticPackageResolution \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""

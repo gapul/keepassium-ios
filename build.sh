@@ -110,6 +110,14 @@ open(f,"w").write(s)
 PY
 plutil -convert xml1 -o /dev/null "$PBX"   # 構文チェック(失敗すれば非0で止まる)
 
+# --- 5.5) コード内ハードコード App Group を entitlement と一致させる ---
+# AppGroup.swift が group.com.keepassium をハードコードしており、entitlement(net.gapul)と
+# 食い違うと FileKeeper.init() が共有コンテナ取得に失敗して起動時クラッシュする。
+grep -rl 'group\.com\.keepassium' KeePassiumLib KeePassium "KeePassium AutoFill" --include='*.swift' 2>/dev/null | while read -r f; do
+  sed -i '' 's/group\.com\.keepassium/group.net.gapul.keepassium/g' "$f"
+done
+echo "==> patched hardcoded App Group in source"
+
 # --- 6) 依存解決 + unsigned device ビルド ---
 export GIT_TERMINAL_PROMPT=0
 xcodebuild -resolvePackageDependencies -workspace KeePassium.xcworkspace -scheme "KeePassium Pro" \
